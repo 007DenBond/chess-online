@@ -51,18 +51,40 @@
 
       <section id="gameScreen" class="hidden game-screen">
         <header class="top-bar">
-          <div class="player-slot white-slot">
-            <span class="player-dot white"></span>
-            <span id="whitePlayerName">Белые</span>
+          <div class="topbar-row-1">
+            <button id="roomCodeTopBtn" class="room-code-top room-code" aria-label="Скопировать код комнаты">
+              <span class="room-code-prefix">Код:</span>
+              <span id="roomCodeTopValue" class="room-code-value">------</span>
+              <span id="roomCodeTopIcon" class="room-code-icon">📋</span>
+            </button>
+            <div class="status-slot" id="turnLabel">Ход белых</div>
           </div>
-          <div class="status-slot" id="turnLabel">Ход белых</div>
-          <div class="player-slot black-slot">
-            <span id="blackPlayerName">Чёрные</span>
-            <span class="player-dot black"></span>
+          <div class="topbar-row-2">
+            <div class="player-slot white-slot player-info">
+              <span class="player-dot white"></span>
+              <span id="whitePlayerName">Белые</span>
+              <span class="player-name-mobile-short">Вы</span>
+              <span id="whiteTimer" class="player-timer">10:00</span>
+            </div>
+            <div class="player-slot black-slot player-info">
+              <span id="blackTimer" class="player-timer">10:00</span>
+              <span id="blackPlayerName">Чёрные</span>
+              <span class="player-name-mobile-short">Соперник</span>
+              <span class="player-dot black"></span>
+            </div>
           </div>
         </header>
 
         <main class="board-wrap">
+          <div id="waitingBanner" class="waiting-banner hidden">
+            <div class="waiting-title">⏳ Ожидание второго игрока...</div>
+            <div class="waiting-code-row">
+              <span>Код комнаты:</span>
+              <code id="waitingCodeValue">------</code>
+              <button id="copyWaitingCodeBtn" class="waiting-copy-btn">📋 Копировать</button>
+            </div>
+            <div class="waiting-note">Передайте код сопернику</div>
+          </div>
           <div id="board" class="board"></div>
         </main>
 
@@ -118,7 +140,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="/chess.min.js"></script>
     <script src="/script.js"></script>
   </body>
 </html>

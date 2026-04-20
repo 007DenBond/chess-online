@@ -22,6 +22,9 @@ const state = {
   hintTimer: null,
   gameStarted: false,
   gameOver: false,
+  waitingForOpponent: false,
+  timers: { white: 600, black: 600 },
+  localTimerInterval: null,
   unreadMessages: 0,
   chatOpen: false
 };
@@ -31,10 +34,17 @@ const refs = {
   gameScreen: document.getElementById("gameScreen"),
   createRoomBtn: document.getElementById("createRoomBtn"),
   joinRoomBtn: document.getElementById("joinRoomBtn"),
+  difficultySelect: document.getElementById("difficultySelect"),
   copyLinkBtn: document.getElementById("copyLinkBtn"),
   roomCodeInput: document.getElementById("roomCodeInput"),
   board: document.getElementById("board"),
   turnLabel: document.getElementById("turnLabel"),
+  roomCodeTopBtn: document.getElementById("roomCodeTopBtn"),
+  roomCodeTopValue: document.getElementById("roomCodeTopValue"),
+  roomCodeTopIcon: document.getElementById("roomCodeTopIcon"),
+  waitingBanner: document.getElementById("waitingBanner"),
+  waitingCodeValue: document.getElementById("waitingCodeValue"),
+  copyWaitingCodeBtn: document.getElementById("copyWaitingCodeBtn"),
   whitePlayerName: document.getElementById("whitePlayerName"),
   blackPlayerName: document.getElementById("blackPlayerName"),
   historyList: document.getElementById("historyList"),
@@ -75,6 +85,46 @@ const showToast = (message) => {
   showToast.timer = setTimeout(() => refs.toast.classList.add("hidden"), 2200);
 };
 
+const fallbackCopyText = (text) => {
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+  try {
+    document.execCommand("copy");
+  } finally {
+    input.remove();
+  }
+};
+
+const copyRoomCodeWithFeedback = async (target = "top") => {
+  const code = state.roomId;
+  if (!code) return;
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+    else fallbackCopyText(code);
+  } catch (_e) {
+    fallbackCopyText(code);
+  }
+
+  if (target === "top") {
+    const original = refs.roomCodeTopIcon.textContent;
+    refs.roomCodeTopIcon.textContent = "✓ Скопировано";
+    setTimeout(() => {
+      refs.roomCodeTopIcon.textContent = original;
+    }, 1500);
+  } else {
+    const original = refs.copyWaitingCodeBtn.textContent;
+    refs.copyWaitingCodeBtn.textContent = "✓ Скопировано";
+    setTimeout(() => {
+      refs.copyWaitingCodeBtn.textContent = original;
+    }, 1500);
+  }
+};
+
 const openConfirmModal = ({ title, text, onConfirm }) => {
   refs.modalTitle.textContent = title;
   refs.modalText.textContent = text;
@@ -104,6 +154,13 @@ const formatTimer = (seconds) => {
   return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
 };
 
+const stopLocalTimer = () => {
+  if (state.localTimerInterval) {
+    clearInterval(state.localTimerInterval);
+    state.localTimerInterval = null;
+  }
+};
+
 const isInCheck = () => {
   if (typeof chess.inCheck === "function") return chess.inCheck();
   if (typeof chess.in_check === "function") return chess.in_check();
@@ -119,6 +176,40 @@ const updateStatusText = () => {
 const updateTopPlayers = () => {
   refs.whitePlayerName.textContent = state.myColor === "white" ? "Белые (Вы)" : "Белые";
   refs.blackPlayerName.textContent = state.myColor === "black" ? "Чёрные (Вы)" : "Чёрные";
+};
+
+const applyTimerUiState = () => {
+  const activeColor = chess.turn() === "w" ? "white" : "black";
+  refs.whiteTimer.classList.toggle("active", activeColor === "white");
+  refs.blackTimer.classList.toggle("active", activeColor === "black");
+  refs.whiteTimer.classList.toggle("low-time", state.timers.white <= 30);
+  refs.blackTimer.classList.toggle("low-time", state.timers.black <= 30);
+};
+
+const renderTimers = () => {
+  refs.whiteTimer.textContent = formatTimer(state.timers.white);
+  refs.blackTimer.textContent = formatTimer(state.timers.black);
+  applyTimerUiState();
+};
+
+const startLocalTimer = () => {
+  stopLocalTimer();
+  state.localTimerInterval = setInterval(() => {
+    if (!state.gameStarted || state.gameOver || state.waitingForOpponent) return;
+    const activeColor = chess.turn() === "w" ? "white" : "black";
+    state.timers[activeColor] = Math.max(0, state.timers[activeColor] - 1);
+    renderTimers();
+  }, 1000);
+};
+
+const updateRoomCodeUi = () => {
+  const code = state.roomId || "------";
+  refs.roomCodeTopValue.textContent = code;
+  refs.waitingCodeValue.textContent = code;
+};
+
+const updateWaitingBanner = () => {
+  refs.waitingBanner.classList.toggle("hidden", !state.waitingForOpponent);
 };
 
 const updateChatBadge = () => {
@@ -237,14 +328,7 @@ const renderBoard = () => {
         },
         { passive: false }
       );
-      cell.addEventListener("mouseenter", () => {
-        if (state.difficulty !== "easy" || state.gameOver) return;
-        const p = chess.get(square);
-        const myPieceColor = state.myColor === "white" ? "w" : "b";
-        if (!p || p.color !== myPieceColor) return;
-        showMovesForSquare(square);
-        renderBoard();
-      });
+      // РЕГРЕССИЯ: не ломать одиночный клик! Ход делается в 2 тапа: фигура -> клетка
 
       refs.board.appendChild(cell);
     }
@@ -299,12 +383,9 @@ const onCellSelect = (square) => {
 };
 
 const updateTimers = ({ white, black }) => {
-  refs.whiteTimer.textContent = formatTimer(white);
-  refs.blackTimer.textContent = formatTimer(black);
-  refs.whiteTimer.classList.toggle("active", chess.turn() === "w");
-  refs.blackTimer.classList.toggle("active", chess.turn() === "b");
-  refs.whiteTimer.classList.toggle("danger", white <= 30);
-  refs.blackTimer.classList.toggle("danger", black <= 30);
+  state.timers.white = white;
+  state.timers.black = black;
+  renderTimers();
 };
 
 const openOverlay = (name) => {
@@ -330,8 +411,11 @@ const enterGameScreen = () => {
   refs.gameScreen.classList.remove("hidden");
   refs.roomCodeLabel.textContent = state.roomId;
   refs.myColorLabel.textContent = state.myColor || "";
+  updateRoomCodeUi();
   updateTopPlayers();
+  updateWaitingBanner();
   updateStatusText();
+  renderTimers();
   renderBoard();
 };
 
@@ -343,8 +427,12 @@ const resetToMenu = () => {
   state.gameStarted = false;
   state.gameOver = false;
   state.lastMove = null;
+  state.timers.white = 600;
+  state.timers.black = 600;
   state.unreadMessages = 0;
   state.chatOpen = false;
+  state.waitingForOpponent = false;
+  stopLocalTimer();
   clearTimeout(state.hintTimer);
   refs.menuScreen.classList.remove("hidden");
   refs.gameScreen.classList.add("hidden");
@@ -382,7 +470,8 @@ bindTap(refs.createRoomBtn, () => {
     showToast("Нет соединения с сервером");
     return;
   }
-  socket.emit("createRoom", { difficulty: refs.difficultySelect.value });
+  const difficulty = refs.difficultySelect?.value ?? "normal";
+  socket.emit("createRoom", { difficulty });
 });
 
 bindTap(refs.joinRoomBtn, () => {
@@ -398,6 +487,14 @@ bindTap(refs.joinRoomBtn, () => {
 refs.copyLinkBtn.addEventListener("click", async () => {
   await navigator.clipboard.writeText(`${window.location.origin}/?room=${state.roomId}`);
   showToast("Ссылка скопирована");
+});
+
+refs.roomCodeTopBtn.addEventListener("click", () => {
+  copyRoomCodeWithFeedback("top");
+});
+
+refs.copyWaitingCodeBtn.addEventListener("click", () => {
+  copyRoomCodeWithFeedback("waiting");
 });
 
 refs.chatForm.addEventListener("submit", (event) => {
@@ -442,6 +539,10 @@ socket.on("roomCreated", ({ roomId, color, difficulty }) => {
   state.myColor = color;
   state.difficulty = difficulty;
   state.gameStarted = false;
+  state.waitingForOpponent = true;
+  state.timers.white = 600;
+  state.timers.black = 600;
+  stopLocalTimer();
   refs.copyLinkBtn.classList.remove("hidden");
   enterGameScreen();
   showToast(`Комната ${roomId} создана`);
@@ -452,8 +553,10 @@ socket.on("roomJoined", ({ roomId, color, fen, difficulty }) => {
   state.myColor = color;
   state.difficulty = difficulty;
   state.gameStarted = true;
+  state.waitingForOpponent = false;
   chess.load(fen);
   enterGameScreen();
+  startLocalTimer();
   scheduleNormalHints();
   showToast("Подключение успешно");
 });
@@ -461,7 +564,10 @@ socket.on("roomJoined", ({ roomId, color, fen, difficulty }) => {
 socket.on("gameStart", ({ fen, difficulty }) => {
   state.gameStarted = true;
   state.difficulty = difficulty || state.difficulty;
+  state.waitingForOpponent = false;
   chess.load(fen);
+  updateWaitingBanner();
+  startLocalTimer();
   renderBoard();
   updateStatusText();
   scheduleNormalHints();
@@ -474,6 +580,7 @@ socket.on("moveMade", ({ fen, move, history }) => {
   renderBoard();
   renderHistory(history);
   updateStatusText();
+  applyTimerUiState();
   scheduleNormalHints();
 });
 
@@ -491,6 +598,7 @@ socket.on("drawOffered", () => showToast("Соперник предложил н
 
 socket.on("gameOver", ({ result, reason }) => {
   state.gameOver = true;
+  stopLocalTimer();
   clearTimeout(state.hintTimer);
   if (result === "draw") refs.turnLabel.textContent = "Ничья";
   else refs.turnLabel.textContent = result === state.myColor ? "Мат. Победа!" : "Мат. Поражение";
@@ -498,6 +606,7 @@ socket.on("gameOver", ({ result, reason }) => {
 });
 
 socket.on("opponentLeft", () => {
+  stopLocalTimer();
   showToast("Соперник отключился");
   setTimeout(resetToMenu, 500);
 });
