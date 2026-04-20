@@ -50,59 +50,60 @@
       </section>
 
       <section id="gameScreen" class="hidden game-screen">
-        <aside class="panel-left">
-            <div class="top-info room-info">
-              <div class="room-code-row">
-                <span>#<b id="roomCodeLabel">------</b></span>
-                <button id="copyRoomCodeInlineBtn" class="copy-inline" aria-label="Скопировать код">📋</button>
-              </div>
-              <div>Ты: <b id="myColorLabel">-</b></div>
-              <div>Ход: <b id="turnLabel">-</b></div>
-              <div class="room-opponent">Соперник: <b id="opponentStatus">ожидание</b></div>
-              <div class="room-mode">Режим: <b id="difficultyLabel">-</b></div>
-            </div>
-            <button id="copyRoomCodeBtn" class="btn-copy" aria-label="Скопировать код">📋</button>
-            <div class="timers">
-              <div class="timer opponent" id="blackTimer">10:00</div>
-              <div class="timer self active" id="whiteTimer">10:00</div>
-            </div>
-            <div class="signature footer-credits">Made with ❤️ by DenBOND</div>
-          </aside>
+        <header class="top-bar">
+          <div class="player-slot white-slot">
+            <span class="player-dot white"></span>
+            <span id="whitePlayerName">Белые</span>
+          </div>
+          <div class="status-slot" id="turnLabel">Ход белых</div>
+          <div class="player-slot black-slot">
+            <span id="blackPlayerName">Чёрные</span>
+            <span class="player-dot black"></span>
+          </div>
+        </header>
 
-          <main class="board-wrap">
-            <div id="board" class="board"></div>
-          </main>
+        <main class="board-wrap">
+          <div id="board" class="board"></div>
+        </main>
 
-          <aside class="panel-right">
-            <div class="tabs">
-              <button class="tab tab-btn active" data-tab="history">📜 История</button>
-              <button class="tab tab-btn tab-chat" data-tab="chat">💬 Чат</button>
-              <button class="tab tab-btn" data-tab="controls">⚙️ Управление</button>
-            </div>
+        <footer class="bottom-bar">
+          <button id="openChatBtn" class="bottom-btn chat-btn">💬<span>Чат</span></button>
+          <button id="openHistoryBtn" class="bottom-btn">📜<span>История</span></button>
+          <button id="resignBtn" class="bottom-btn">🏳️<span>Сдаться</span></button>
+          <button id="leaveBtn" class="bottom-btn">🚪<span>Выход</span></button>
+        </footer>
 
-            <div id="historyTab" class="tab-content active">
-              <button class="tab-close" type="button" aria-label="Закрыть вкладку">✕</button>
-              <ol id="historyList"></ol>
+        <div id="chatModal" class="overlay-modal hidden">
+          <div class="overlay-backdrop" data-close-modal="chat"></div>
+          <div class="overlay-panel">
+            <div class="overlay-header">
+              <h3>Чат</h3>
+              <button class="overlay-close" data-close-modal="chat" aria-label="Закрыть">×</button>
             </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <form id="chatForm" class="chat-form">
+              <input id="chatInput" maxlength="200" autocomplete="off" enterkeyhint="send" />
+              <button type="submit">Отправить</button>
+            </form>
+          </div>
+        </div>
 
-            <div id="chatTab" class="tab-content">
-              <button class="tab-close" type="button" aria-label="Закрыть вкладку">✕</button>
-              <div id="chatMessages" class="chat-messages"></div>
-              <form id="chatForm" class="chat-form">
-                <input id="chatInput" maxlength="200" autocomplete="off" enterkeyhint="send" />
-                <button type="submit">Отправить</button>
-              </form>
+        <div id="historyModal" class="overlay-modal hidden">
+          <div class="overlay-backdrop" data-close-modal="history"></div>
+          <div class="overlay-panel">
+            <div class="overlay-header">
+              <h3>История ходов</h3>
+              <button class="overlay-close" data-close-modal="history" aria-label="Закрыть">×</button>
             </div>
+            <ol id="historyList" class="history-list"></ol>
+          </div>
+        </div>
 
-            <div id="controlsTab" class="tab-content actions">
-              <button class="tab-close" type="button" aria-label="Закрыть вкладку">✕</button>
-              <button id="resignBtn" class="btn btn-danger">Сдаться</button>
-              <button id="offerDrawBtn" class="btn">Предложить ничью</button>
-              <button id="newGameBtn" class="btn">Новая игра</button>
-              <button id="leaveBtn" class="btn btn-ghost">Выйти в меню</button>
-            </div>
-          </aside>
-        
+        <div class="game-credits">Made with ❤️ by DenBOND</div>
+        <div id="roomCodeLabel" class="hidden"></div>
+        <div id="myColorLabel" class="hidden"></div>
+        <div id="opponentStatus" class="hidden"></div>
+        <div id="difficultyLabel" class="hidden"></div>
       </section>
     </div>
 
