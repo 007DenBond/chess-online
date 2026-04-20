@@ -52,7 +52,9 @@ const state = {
     legalMoves: [],
     hoverSquare: null,
     ghost: null,
-    moved: false
+    moved: false,
+    startX: 0,
+    startY: 0
   }
 };
 
@@ -233,6 +235,8 @@ const clearDragState = () => {
   state.drag.hoverSquare = null;
   state.drag.ghost = null;
   state.drag.moved = false;
+  state.drag.startX = 0;
+  state.drag.startY = 0;
 };
 
 const findHoverSquare = (clientX, clientY) => {
@@ -272,6 +276,8 @@ const startDrag = (fromSquare, clientX, clientY) => {
   state.drag.legalMoves = legalMoves;
   state.drag.hoverSquare = null;
   state.drag.moved = false;
+  state.drag.startX = clientX;
+  state.drag.startY = clientY;
 
   showMovesForSquare(fromSquare);
 
@@ -293,7 +299,7 @@ const updateDrag = (clientX, clientY) => {
   renderBoard();
 };
 
-const finishDrag = () => {
+const finishDrag = (tapSquare = null) => {
   if (!state.drag.active) return;
   const from = state.drag.from;
   const to = state.drag.hoverSquare;
@@ -301,6 +307,11 @@ const finishDrag = () => {
   const hadMovement = state.drag.moved;
 
   clearDragState();
+
+  if (!hadMovement && tapSquare) {
+    onCellClick(tapSquare);
+    return;
+  }
 
   if (!hadMovement) {
     renderBoard();
@@ -527,19 +538,57 @@ refs.board.addEventListener(
     if (!state.drag.active) return;
     const touch = event.touches[0];
     if (!touch) return;
+    const deltaX = Math.abs(touch.clientX - state.drag.startX);
+    const deltaY = Math.abs(touch.clientY - state.drag.startY);
+    // Treat tiny movement as a tap; avoid accidental drag on touch screens.
+    if (deltaX < 8 && deltaY < 8) {
+      event.preventDefault();
+      return;
+    }
     updateDrag(touch.clientX, touch.clientY);
     event.preventDefault();
   },
   { passive: false }
 );
 
-document.addEventListener("touchend", () => {
-  finishDrag();
-});
+document.addEventListener(
+  "touchend",
+  (event) => {
+    if (!state.drag.active) return;
+    const touch = event.changedTouches?.[0];
+    const tapSquare = touch ? findHoverSquare(touch.clientX, touch.clientY) : null;
+    finishDrag(tapSquare);
+    event.preventDefault();
+  },
+  { passive: false }
+);
 
-document.addEventListener("touchcancel", () => {
-  finishDrag();
-});
+document.addEventListener(
+  "touchcancel",
+  (event) => {
+    finishDrag();
+    event.preventDefault();
+  },
+  { passive: false }
+);
+
+refs.board.addEventListener(
+  "touchend",
+  (event) => {
+    // Block emulated click after touch to prevent double-trigger.
+    event.preventDefault();
+  },
+  { passive: false }
+);
+
+refs.board.addEventListener(
+  "touchstart",
+  (event) => {
+    // Keep scrolling/zoom gestures from hijacking board taps.
+    event.preventDefault();
+  },
+  { passive: false }
+);
 
 const appendChat = ({ color, message }) => {
   const row = document.createElement("div");
