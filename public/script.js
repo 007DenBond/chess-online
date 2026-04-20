@@ -47,6 +47,8 @@ const refs = {
   copyWaitingCodeBtn: document.getElementById("copyWaitingCodeBtn"),
   whitePlayerName: document.getElementById("whitePlayerName"),
   blackPlayerName: document.getElementById("blackPlayerName"),
+  whiteRoleMobile: document.getElementById("whiteRoleMobile"),
+  blackRoleMobile: document.getElementById("blackRoleMobile"),
   historyList: document.getElementById("historyList"),
   chatMessages: document.getElementById("chatMessages"),
   chatForm: document.getElementById("chatForm"),
@@ -174,8 +176,12 @@ const updateStatusText = () => {
 };
 
 const updateTopPlayers = () => {
-  refs.whitePlayerName.textContent = state.myColor === "white" ? "Белые (Вы)" : "Белые";
-  refs.blackPlayerName.textContent = state.myColor === "black" ? "Чёрные (Вы)" : "Чёрные";
+  const amWhite = state.myColor === "white";
+  const amBlack = state.myColor === "black";
+  refs.whitePlayerName.textContent = amWhite ? "Белые (Вы)" : "Белые (Соперник)";
+  refs.blackPlayerName.textContent = amBlack ? "Чёрные (Вы)" : "Чёрные (Соперник)";
+  if (refs.whiteRoleMobile) refs.whiteRoleMobile.textContent = amWhite ? "Вы" : "Соперник";
+  if (refs.blackRoleMobile) refs.blackRoleMobile.textContent = amBlack ? "Вы" : "Соперник";
 };
 
 const applyTimerUiState = () => {
