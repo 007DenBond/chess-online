@@ -377,9 +377,19 @@ const bindTap = (element, handler) => {
   );
 };
 
-bindTap(refs.createRoomBtn, () => socket.emit("createRoom", { difficulty: refs.difficultySelect.value }));
+bindTap(refs.createRoomBtn, () => {
+  if (!socket.connected) {
+    showToast("Нет соединения с сервером");
+    return;
+  }
+  socket.emit("createRoom", { difficulty: refs.difficultySelect.value });
+});
 
 bindTap(refs.joinRoomBtn, () => {
+  if (!socket.connected) {
+    showToast("Нет соединения с сервером");
+    return;
+  }
   const roomId = refs.roomCodeInput.value.trim().toUpperCase();
   if (roomId.length !== 6) return showToast("Введите 6-значный код комнаты");
   socket.emit("joinRoom", roomId);

@@ -13,6 +13,19 @@ html, body {
 .app { height: 100%; }
 .hidden { display: none !important; }
 
+#menuScreen {
+  position: relative;
+  z-index: 5;
+}
+
+#gameScreen {
+  display: none;
+}
+
+#gameScreen:not(.hidden) {
+  display: flex;
+}
+
 .menu-screen {
   max-width: 520px;
   margin: 8vh auto 0;
