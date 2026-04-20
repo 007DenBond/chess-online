@@ -1,0 +1,19 @@
+{
+  "name": "bondchess",
+  "version": "1.0.0",
+  "description": "Online chess game by DenBOND",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "DenBOND",
+  "license": "MIT",
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
