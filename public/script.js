@@ -364,9 +364,22 @@ const appendChat = ({ color, message }) => {
   refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
 };
 
-refs.createRoomBtn.addEventListener("click", () => socket.emit("createRoom", { difficulty: refs.difficultySelect.value }));
+const bindTap = (element, handler) => {
+  if (!element) return;
+  element.addEventListener("click", handler);
+  element.addEventListener(
+    "touchend",
+    (event) => {
+      event.preventDefault();
+      handler();
+    },
+    { passive: false }
+  );
+};
 
-refs.joinRoomBtn.addEventListener("click", () => {
+bindTap(refs.createRoomBtn, () => socket.emit("createRoom", { difficulty: refs.difficultySelect.value }));
+
+bindTap(refs.joinRoomBtn, () => {
   const roomId = refs.roomCodeInput.value.trim().toUpperCase();
   if (roomId.length !== 6) return showToast("Введите 6-значный код комнаты");
   socket.emit("joinRoom", roomId);
