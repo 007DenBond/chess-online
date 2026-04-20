@@ -31,6 +31,7 @@ const PIECE_TYPES = {
 };
 const PIECE_ASSETS = ["wK", "wQ", "wR", "wB", "wN", "wP", "bK", "bQ", "bR", "bB", "bN", "bP"];
 const DEFAULT_TITLE = "Шахматы";
+const IS_TOUCH_DEVICE = "ontouchstart" in window || window.matchMedia("(pointer: coarse)").matches;
 
 const state = {
   roomId: "",
@@ -46,6 +47,11 @@ const state = {
   unreadMessages: 0,
   chatOpen: false,
   notificationPermissionRequested: false,
+  touchTap: {
+    square: null,
+    startX: 0,
+    startY: 0
+  },
   drag: {
     active: false,
     from: null,
@@ -409,6 +415,7 @@ const renderBoard = () => {
         renderBoard();
       });
       cell.addEventListener("mousedown", (event) => {
+        if (IS_TOUCH_DEVICE) return;
         if (event.button !== 0) return;
         if (!startDrag(square, event.clientX, event.clientY)) return;
         event.preventDefault();
@@ -418,7 +425,29 @@ const renderBoard = () => {
         (event) => {
           const touch = event.touches[0];
           if (!touch) return;
-          if (!startDrag(square, touch.clientX, touch.clientY)) return;
+          // On touch devices we use tap-to-select / tap-to-move only.
+          state.touchTap.square = square;
+          state.touchTap.startX = touch.clientX;
+          state.touchTap.startY = touch.clientY;
+          event.preventDefault();
+        },
+        { passive: false }
+      );
+      cell.addEventListener(
+        "touchend",
+        (event) => {
+          const touch = event.changedTouches?.[0];
+          if (!touch) return;
+          const dx = Math.abs(touch.clientX - state.touchTap.startX);
+          const dy = Math.abs(touch.clientY - state.touchTap.startY);
+          const tapSquare = state.touchTap.square;
+          state.touchTap.square = null;
+          // Ignore swipes and long movements.
+          if (dx > 10 || dy > 10) {
+            event.preventDefault();
+            return;
+          }
+          if (tapSquare) onCellClick(tapSquare);
           event.preventDefault();
         },
         { passive: false }
@@ -524,28 +553,26 @@ const resetToMenu = () => {
 };
 
 document.addEventListener("mousemove", (event) => {
+  if (IS_TOUCH_DEVICE) return;
   if (!state.drag.active) return;
   updateDrag(event.clientX, event.clientY);
 });
 
 document.addEventListener("mouseup", () => {
+  if (IS_TOUCH_DEVICE) return;
   finishDrag();
 });
 
 refs.board.addEventListener(
   "touchmove",
   (event) => {
-    if (!state.drag.active) return;
+    if (!IS_TOUCH_DEVICE || !state.touchTap.square) return;
     const touch = event.touches[0];
     if (!touch) return;
-    const deltaX = Math.abs(touch.clientX - state.drag.startX);
-    const deltaY = Math.abs(touch.clientY - state.drag.startY);
-    // Treat tiny movement as a tap; avoid accidental drag on touch screens.
-    if (deltaX < 8 && deltaY < 8) {
-      event.preventDefault();
-      return;
-    }
-    updateDrag(touch.clientX, touch.clientY);
+    const deltaX = Math.abs(touch.clientX - state.touchTap.startX);
+    const deltaY = Math.abs(touch.clientY - state.touchTap.startY);
+    // Cancel pending tap if user swipes.
+    if (deltaX > 10 || deltaY > 10) state.touchTap.square = null;
     event.preventDefault();
   },
   { passive: false }
@@ -554,10 +581,8 @@ refs.board.addEventListener(
 document.addEventListener(
   "touchend",
   (event) => {
-    if (!state.drag.active) return;
-    const touch = event.changedTouches?.[0];
-    const tapSquare = touch ? findHoverSquare(touch.clientX, touch.clientY) : null;
-    finishDrag(tapSquare);
+    if (!IS_TOUCH_DEVICE) return;
+    state.touchTap.square = null;
     event.preventDefault();
   },
   { passive: false }
@@ -566,7 +591,8 @@ document.addEventListener(
 document.addEventListener(
   "touchcancel",
   (event) => {
-    finishDrag();
+    if (!IS_TOUCH_DEVICE) return;
+    state.touchTap.square = null;
     event.preventDefault();
   },
   { passive: false }
@@ -585,7 +611,7 @@ refs.board.addEventListener(
   "touchstart",
   (event) => {
     // Keep scrolling/zoom gestures from hijacking board taps.
-    event.preventDefault();
+    if (IS_TOUCH_DEVICE) event.preventDefault();
   },
   { passive: false }
 );
