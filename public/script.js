@@ -581,9 +581,9 @@ refs.board.addEventListener(
 document.addEventListener(
   "touchend",
   (event) => {
-    if (!IS_TOUCH_DEVICE) return;
+    if (!IS_TOUCH_DEVICE || !state.touchTap.square) return;
+    // Only interfere with touch sequence started on board cells.
     state.touchTap.square = null;
-    event.preventDefault();
   },
   { passive: false }
 );
@@ -591,9 +591,8 @@ document.addEventListener(
 document.addEventListener(
   "touchcancel",
   (event) => {
-    if (!IS_TOUCH_DEVICE) return;
+    if (!IS_TOUCH_DEVICE || !state.touchTap.square) return;
     state.touchTap.square = null;
-    event.preventDefault();
   },
   { passive: false }
 );
